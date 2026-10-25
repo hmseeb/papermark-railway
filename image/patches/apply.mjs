@@ -14,6 +14,13 @@ function edit(file, find, replace) {
   writeFileSync(file, src.replace(find, () => replace));
 }
 
+function editAll(file, find, replace, expected) {
+  const src = readFileSync(file, "utf8");
+  const count = src.split(find).length - 1;
+  if (count !== expected) throw new Error(`${file}: anchor matched ${count}x, wanted ${expected}: ${find.slice(0, 80)}`);
+  writeFileSync(file, src.split(find).join(replace));
+}
+
 // 1. New files: trigger shim, its progress API, the Postgres Tinybird port.
 cpSync(join(here, "files"), ".", { recursive: true });
 
@@ -49,6 +56,21 @@ edit(
   "lib/middleware/app.ts",
   `    secret: process.env.NEXTAUTH_SECRET,\n  })) as {`,
   `    secret: process.env.NEXTAUTH_SECRET,\n    secureCookie: false,\n  })) as {`,
+);
+
+// The tus upload store builds its S3 clients without the configured
+// endpoint (the "omit endpoint if empty" comments have no code behind them),
+// so uploads only ever worked against AWS itself.
+editAll(
+  "ee/features/storage/s3-store.ts",
+  `      region: euConfig.region,\n      credentials: {`,
+  `      region: euConfig.region,\n      ...(euConfig.endpoint ? { endpoint: euConfig.endpoint } : {}),\n      credentials: {`,
+  2,
+);
+edit(
+  "ee/features/storage/s3-store.ts",
+  `        region: this.usConfig.region,\n        credentials: {`,
+  `        region: this.usConfig.region,\n        ...(this.usConfig.endpoint ? { endpoint: this.usConfig.endpoint } : {}),\n        credentials: {`,
 );
 
 // 3. Optional SaaS that upstream requires at import or on signup.
