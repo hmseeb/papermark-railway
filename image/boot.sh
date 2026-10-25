@@ -27,6 +27,8 @@ export NEXTAUTH_URL="${NEXTAUTH_URL:-https://${APP_HOST}}"
 export NEXT_PUBLIC_BASE_URL="https://${APP_HOST}"
 export NEXT_PUBLIC_MARKETING_URL="https://${APP_HOST}"
 export NEXT_PUBLIC_APP_BASE_HOST="${APP_HOST}"
+# Importing the AI routes constructs an OpenAI client, which throws without a key.
+export OPENAI_API_KEY="${OPENAI_API_KEY:-unset}"
 
 # Railway sometimes resolves a template's ${{bucket.X}} references to empty
 # strings on first deploy and caches the miss; only re-saving heals it.

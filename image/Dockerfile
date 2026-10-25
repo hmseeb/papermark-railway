@@ -36,7 +36,9 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_APP_BASE_HOST=papermark-railway-host.invalid \
     NEXT_PUBLIC_UPLOAD_TRANSPORT=s3 \
     NEXT_PUBLIC_WEBHOOK_BASE_HOST=papermark-webhooks.invalid
-RUN npm run build && rm -rf .next/cache
+# AI routes construct an OpenAI client at import, which throws without a key
+# while Next collects page data. AI features are plan-gated off anyway.
+RUN OPENAI_API_KEY=unset npm run build && rm -rf .next/cache
 
 FROM node:24-bookworm-slim
 RUN apt-get update \
