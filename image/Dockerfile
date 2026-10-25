@@ -3,7 +3,10 @@
 # Upstash; the patches swap those for in-process and Postgres stand-ins.
 FROM node:24-bookworm-slim AS build
 
-ARG PAPERMARK_REF=ed19717ec02a1ac79aecf5569159aa9d2d869312
+# bb93cfd (2026-04-29) is the newest upstream commit that builds from the
+# public repo: every later main imports ee/ and lib/ modules that were never
+# published (51 missing at ed19717, 2026-08-28).
+ARG PAPERMARK_REF=bb93cfd03c7531f67cbb09a652e61c92de16d371
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates openssl python3 make g++ \

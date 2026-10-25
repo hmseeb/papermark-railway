@@ -2,7 +2,7 @@
 
 Container image behind the Papermark Railway template: upstream
 [papermark/papermark](https://github.com/papermark/papermark) at a pinned
-commit, plus the patches in `image/patches/` that make it run without
+commit (bb93cfd, the newest that builds from public code), plus the patches in `image/patches/` that make it run without
 Vercel, Trigger.dev, Tinybird or Upstash.
 
 | Patch | Why |

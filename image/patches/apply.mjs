@@ -72,8 +72,8 @@ edit(
 );
 edit(
   "lib/resend.ts",
-  `        replyTo: marketing ? "marc@papermark.com" : replyTo,`,
-  `        replyTo,`,
+  `replyTo: marketing ? "marc@papermark.com" : replyTo,`,
+  `replyTo,`,
 );
 
 // 5. Admin password sign-in: the deploy is usable before any email provider

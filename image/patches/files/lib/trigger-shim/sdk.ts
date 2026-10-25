@@ -323,6 +323,38 @@ export class AbortTaskRunError extends Error {
 
 export const queue = (opts: any) => opts;
 
+export const retry = {
+  // Trigger's retry.fetch retries network errors and 5xx/429 with backoff.
+  fetch: async (url: any, init: any = {}): Promise<Response> => {
+    const { retry: _policy, timeoutInMs, ...rest } = init ?? {};
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const res = await fetch(url, {
+          ...rest,
+          ...(timeoutInMs ? { signal: AbortSignal.timeout(timeoutInMs) } : {}),
+        });
+        if ((res.status >= 500 || res.status === 429) && attempt < 3) throw res;
+        return res;
+      } catch (error) {
+        if (attempt >= 3 && error instanceof Error) throw error;
+        if (attempt >= 3) return error as Response;
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      }
+    }
+  },
+  onThrow: async <T>(fn: (opts: { attempt: number }) => Promise<T>, opts: { maxAttempts?: number } = {}) => {
+    const max = opts.maxAttempts ?? 3;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await fn({ attempt });
+      } catch (error) {
+        if (attempt >= max) throw error;
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      }
+    }
+  },
+};
+
 export const wait = {
   for: async (d: { seconds?: number; minutes?: number; hours?: number }) =>
     new Promise((r) =>
