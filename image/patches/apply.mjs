@@ -63,6 +63,14 @@ edit(
   `      if (process.env.QSTASH_TOKEN) await qstash.publishJSON({`,
 );
 
+// Slack is an optional integration whose client throws in its constructor,
+// and lib/integrations/slack/events.ts instantiates it at import.
+edit(
+  "lib/integrations/slack/client.ts",
+  `      throw new Error("SLACK_CLIENT_ID and SLACK_CLIENT_SECRET must be set");`,
+  `      return;`,
+);
+
 // 4. Email goes out as the deployer's own verified sender, never as
 // papermark.com (which no deployer's Resend key can send from).
 edit(
