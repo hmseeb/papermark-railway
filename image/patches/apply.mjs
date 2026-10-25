@@ -180,10 +180,13 @@ for (const f of ["lib/tinybird/publish.ts", "lib/tinybird/pipes.ts"]) {
 // 7. Trigger.dev -> in-process shim. Webpack aliases both packages; the
 // registry maps task ids to lazy imports for tasks.trigger("<id>") calls,
 // which only import the task module as a type.
+// The browser bundle gets an inert stub: client components reach the SDK
+// through shared helpers, and the real shim needs node:async_hooks.
+edit("next.config.mjs", `  webpack: (config) => {`, `  webpack: (config, { isServer }) => {`);
 edit(
   "next.config.mjs",
   `      "@google-cloud/kms": false,`,
-  `      "@trigger.dev/sdk$": \`\${process.cwd()}/lib/trigger-shim/sdk.ts\`,
+  `      "@trigger.dev/sdk$": \`\${process.cwd()}/lib/trigger-shim/\${isServer ? "sdk" : "client"}.ts\`,
       "@trigger.dev/react-hooks$": \`\${process.cwd()}/lib/trigger-shim/react-hooks.ts\`,
       "@google-cloud/kms": false,`,
 );
