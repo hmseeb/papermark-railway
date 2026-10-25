@@ -19,7 +19,7 @@ cpSync(join(here, "files"), ".", { recursive: true });
 
 // 2. Railway hosting: the app's own *.up.railway.app host is not a customer
 // custom domain (upstream treats every host but papermark.com/vercel.app as
-// one), remote page images come from the bucket's virtual host, and the
+// one), remote page images come from the bucket's virtual host (Railway buckets: <bucket>.t3.storageapi.dev), and the
 // type check is skipped (the shims below are deliberately looser than the
 // real SDK types; upstream type-checks its own code in CI).
 edit(
@@ -39,7 +39,16 @@ edit(
   "next.config.mjs",
   `    { protocol: "https", hostname: "faisalman.github.io" },`,
   `    { protocol: "https", hostname: "faisalman.github.io" },
-    { protocol: "https", hostname: "**.storage.railway.app" },`,
+    { protocol: "https", hostname: "**.storageapi.dev" },`,
+);
+
+// auth-options names the session cookie without the __Secure- prefix off
+// Vercel, but getToken infers the prefixed name from an https NEXTAUTH_URL,
+// so every signed-in request was bounced back to /login.
+edit(
+  "lib/middleware/app.ts",
+  `    secret: process.env.NEXTAUTH_SECRET,\n  })) as {`,
+  `    secret: process.env.NEXTAUTH_SECRET,\n    secureCookie: false,\n  })) as {`,
 );
 
 // 3. Optional SaaS that upstream requires at import or on signup.
