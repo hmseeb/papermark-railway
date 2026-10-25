@@ -19,17 +19,27 @@ RUN node /patches/apply.mjs
 
 RUN npm ci --no-audit --no-fund
 
+# @upstash/ratelimit's Lua scripts declare an Upstash-only shebang flag that
+# real Redis rejects ("Unexpected flag in script shebang"); Redis here sits
+# behind serverless-redis-http, so drop the flag.
+RUN f=node_modules/@upstash/ratelimit/dist; grep -q 'flags=allow-key-locking' $f/index.js \
+    && sed -i 's/#!lua flags=allow-key-locking/#!lua/g' $f/index.js $f/index.mjs \
+    && ! grep -q 'flags=allow-key-locking' $f/index.js $f/index.mjs
+
 # Next's production build of this app needs far more than Node's default heap.
 ARG NODE_HEAP=12288
 
 # NEXT_PUBLIC_* values are inlined at build time. The host is a placeholder
-# that boot.sh rewrites to the deploy's real domain on every start.
+# that boot.sh rewrites to the deploy's real domain on every start. The
+# webhook host only has to be non-empty (next.config uses it in a `has`
+# rule) and never match: incoming webhooks need a second domain.
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS=--max-old-space-size=${NODE_HEAP} \
     NEXT_PUBLIC_BASE_URL=https://papermark-railway-host.invalid \
     NEXT_PUBLIC_MARKETING_URL=https://papermark-railway-host.invalid \
     NEXT_PUBLIC_APP_BASE_HOST=papermark-railway-host.invalid \
-    NEXT_PUBLIC_UPLOAD_TRANSPORT=s3
+    NEXT_PUBLIC_UPLOAD_TRANSPORT=s3 \
+    NEXT_PUBLIC_WEBHOOK_BASE_HOST=papermark-webhooks.invalid
 RUN npm run build && rm -rf .next/cache
 
 FROM node:24-bookworm-slim

@@ -28,6 +28,16 @@ export NEXT_PUBLIC_BASE_URL="https://${APP_HOST}"
 export NEXT_PUBLIC_MARKETING_URL="https://${APP_HOST}"
 export NEXT_PUBLIC_APP_BASE_HOST="${APP_HOST}"
 
+# Railway sometimes resolves a template's ${{bucket.X}} references to empty
+# strings on first deploy and caches the miss; only re-saving heals it.
+for v in NEXT_PRIVATE_UPLOAD_BUCKET NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY NEXT_PRIVATE_UPLOAD_ENDPOINT; do
+  if [ -z "$(printenv "$v" || true)" ]; then
+    echo "boot: $v is empty. Railway did not resolve the bucket references: open this service's Variables, re-save each NEXT_PRIVATE_UPLOAD_* variable unchanged, then redeploy." >&2
+    sleep 30
+    exit 1
+  fi
+done
+
 cd /app
 node_modules/.bin/prisma migrate deploy
 exec node_modules/.bin/next start -H :: -p "${PORT:-3000}"
