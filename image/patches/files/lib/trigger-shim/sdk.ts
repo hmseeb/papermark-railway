@@ -300,6 +300,10 @@ export const metadata = {
   },
 };
 
+// lib/utils/generate-trigger-status.ts reaches metadata through this global
+// so that client components importing it never bundle this module.
+g.__pmTriggerMetadata = metadata;
+
 const log =
   (fn: (...a: any[]) => void) =>
   (message: string, data?: Record<string, any>) =>

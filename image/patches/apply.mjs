@@ -216,18 +216,18 @@ for (const f of ["lib/tinybird/publish.ts", "lib/tinybird/pipes.ts"]) {
   edit(f, `import { Tinybird } from "@chronark/zod-bird";`, `import { Tinybird } from "./pg";`);
 }
 
-// 7. Trigger.dev -> in-process shim. Webpack aliases both packages; the
-// registry maps task ids to lazy imports for tasks.trigger("<id>") calls,
-// which only import the task module as a type.
-// The browser bundle gets an inert stub: client components reach the SDK
-// through shared helpers, and the real shim needs node:async_hooks.
-edit("next.config.mjs", `  webpack: (config) => {`, `  webpack: (config, { isServer }) => {`);
+// 7. Trigger.dev -> in-process shim. Every app import of the SDK is
+// rewritten to the shim's own path: a webpack alias is not enough, because
+// the pages router leaves node_modules packages external and require()s the
+// real SDK at runtime. The registry maps task ids to lazy imports for
+// tasks.trigger("<id>") calls, which import the task module only as a type.
+// generate-trigger-status is the one SDK importer that client components
+// reach (for parseStatus), so it finds the shim's metadata through a global
+// instead of importing it, keeping node:async_hooks out of the browser.
 edit(
-  "next.config.mjs",
-  `      "@google-cloud/kms": false,`,
-  `      "@trigger.dev/sdk$": \`\${process.cwd()}/lib/trigger-shim/\${isServer ? "sdk" : "client"}.ts\`,
-      "@trigger.dev/react-hooks$": \`\${process.cwd()}/lib/trigger-shim/react-hooks.ts\`,
-      "@google-cloud/kms": false,`,
+  "lib/utils/generate-trigger-status.ts",
+  `import { metadata } from "@trigger.dev/sdk";`,
+  `const metadata = {\n  set: (key: string, value: unknown) =>\n    (globalThis as any).__pmTriggerMetadata?.set(key, value),\n};`,
 );
 const walk = (d) =>
   readdirSync(d).flatMap((f) => {
@@ -238,8 +238,13 @@ const walk = (d) =>
 const entries = [];
 for (const file of walk(".")) {
   if (file.startsWith("lib/trigger-shim")) continue;
-  const src = readFileSync(file, "utf8");
+  let src = readFileSync(file, "utf8");
+  if (src.includes('from "@trigger.dev/react-hooks"')) {
+    src = src.replaceAll('from "@trigger.dev/react-hooks"', 'from "@/lib/trigger-shim/react-hooks"');
+    writeFileSync(file, src);
+  }
   if (!src.includes('from "@trigger.dev/sdk"')) continue;
+  writeFileSync(file, src.replaceAll('from "@trigger.dev/sdk"', 'from "@/lib/trigger-shim/sdk"'));
   const re = /export const (\w+)\s*=\s*(?:task|schemaTask|schedules\.task)\(\{\s*id:\s*"([^"]+)"/g;
   for (const [, name, id] of src.matchAll(re)) {
     const mod = "@/" + relative(".", file).replace(/\.tsx?$/, "");
